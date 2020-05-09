@@ -1,16 +1,13 @@
 package GoServerDetect
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net"
 	"strconv"
+	"github.com/KairosSystems/GoServerDetect/Models"
 )
-
-type ServerResponse struct {
-	Ip string `json:"server"`
-	Data []byte `json:"data"`
-}
 
 func CreateServer(port int, psk string, response []byte) error {
 	pc,err := net.ListenPacket("udp4", ":" + strconv.Itoa(port))
@@ -28,9 +25,9 @@ func CreateServer(port int, psk string, response []byte) error {
 		request := string(buf[:n])
 		if request == psk {
 			log.Printf("%s validated\n", addr)
-			data, err := json.Marshal(&ServerResponse{
+			data, err := json.Marshal(&Models.ServerResponse{
 				Ip:   addr.(*net.UDPAddr).IP.String(),
-				Data: response,
+				Data: base64.StdEncoding.EncodeToString(response),
 			})
 			_, err = pc.WriteTo(data, addr)
 			if err != nil {
