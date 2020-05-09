@@ -1,12 +1,18 @@
 package GoServerDetect
 
 import (
+	"encoding/json"
 	"log"
 	"net"
 	"strconv"
 )
 
-func CreateServer(port int, psk string, res []byte) error {
+type ServerResponse struct {
+	Ip string `json:"server"`
+	Data []byte `json:"data"`
+}
+
+func CreateServer(port int, psk string, response []byte) error {
 	pc,err := net.ListenPacket("udp4", ":" + strconv.Itoa(port))
 	if err != nil {
 		return err
@@ -20,12 +26,20 @@ func CreateServer(port int, psk string, res []byte) error {
 			log.Println(err)
 		}
 		request := string(buf[:n])
-		log.Printf("%s sent this: %s\n\n", addr, request)
 		if request == psk {
-			_, err = pc.WriteTo(res, addr)
+			log.Printf("%s validated\n", addr)
+			data, err := json.Marshal(&ServerResponse{
+				Ip:   addr.(*net.UDPAddr).IP.String(),
+				Data: response,
+			})
+			_, err = pc.WriteTo(data, addr)
 			if err != nil {
 				log.Println(err)
+			} else {
+				log.Printf("%s response returned\n", addr)
 			}
+		} else {
+			log.Printf("%s with invalid payload %s\n", addr, request)
 		}
 	}
 }
